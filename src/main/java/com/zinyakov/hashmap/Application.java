@@ -1,4 +1,4 @@
-package com.zinyakov.hasmap;
+package com.zinyakov.hashmap;
 
 public class Application {
 
