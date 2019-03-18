@@ -1,17 +1,24 @@
 package com.zinyakov.hashmap.models;
 
-import java.util.Arrays;
 import static java.util.Arrays.stream;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 public class HashMap<K,V> implements Map<K, V> {
+    private static final int DEFAULT_CAPACITY = 16;
+
     private Bucket<K, V>[] buckets;
+
+    public HashMap() {
+        this(DEFAULT_CAPACITY);
+    }
 
     public HashMap(int capacity) {
         this.buckets = new Bucket[capacity];
@@ -36,46 +43,56 @@ public class HashMap<K,V> implements Map<K, V> {
 
     @Override
     public boolean containsKey(Object key) {
-        return getEntry(key) != null;
+        return keySet().contains(key);
     }
 
     @Override
     public boolean containsValue(Object value) {
-        return false;
+        return values().contains(value);
     }
 
     @Override
     public V get(Object key) {
-        Entry<K, V> matchingEntry = getEntry(key);
-        return matchingEntry == null ? null : matchingEntry.getValue();
+        Optional<Entry<K, V>> matchingEntry = getEntry(key);
+        return matchingEntry.isPresent() ? matchingEntry.get().getValue() : null;
     }
 
     @Override
     public V put(K key, V value) {
-        Entry<K, V> matchingEntry = getEntry(key);
+        Optional<Entry<K, V>> matchingEntry = getEntry(key);
 
-        if (matchingEntry == null) {
+        if (!matchingEntry.isPresent()) {
             Bucket<K, V> bucket = findBucketForKey(key);
             bucket.getEntryList().add(new EntryModel<>(key, value));
             return null;
         }
 
-        V oldValue = matchingEntry.getValue();
-        matchingEntry.setValue(value);
+        V oldValue = matchingEntry.get().getValue();
+        matchingEntry.get().setValue(value);
         return oldValue;
     }
 
     @Override
     public boolean remove(Object key, Object value) {
-        if (value != getEntry(key).getValue()) {
+        Optional<Map.Entry<K, V>> entry = getEntry(key);
+        if (!entry.isPresent()) {
             return false;
         }
+        if (value != entry.get().getValue()) {
+            return false;
+        }
+
         return removeEntry(key);
     }
 
     @Override
     public V remove(Object key) {
-        V oldValue = getEntry(key).getValue();
+        Optional<Map.Entry<K, V>> entry = getEntry(key);
+        if (!entry.isPresent()) {
+            return null;
+        }
+
+        V oldValue = entry.get().getValue();
         removeEntry(key);
         return oldValue;
     }
@@ -87,9 +104,8 @@ public class HashMap<K,V> implements Map<K, V> {
 
     @Override
     public void clear() {
-        Arrays.stream(buckets)
-              .map(Bucket::getEntryList)
-              .forEach(List::clear);
+        stream(buckets).map(Bucket::getEntryList)
+                       .forEach(List::clear);
     }
 
     @Override
@@ -103,31 +119,34 @@ public class HashMap<K,V> implements Map<K, V> {
     public Collection<V> values() {
         return entrySet().stream()
                          .map(Entry::getValue)
+                         .filter(Objects::nonNull)
                          .collect(toList());
     }
 
     @Override
     public Set<Entry<K, V>> entrySet() {
-        return Arrays.stream(buckets)
-                     .map(Bucket::getEntryList)
-                     .flatMap(List::stream)
-                     .collect(toSet());
+        return stream(buckets)
+                .map(Bucket::getEntryList)
+                .flatMap(List::stream)
+                .collect(toSet());
     }
 
-    private Entry<K, V> getEntry(Object key) {
+    private Optional<Entry<K, V>> getEntry(Object key) {
         Bucket<K, V> bucket = findBucketForKey(key);
 
         return bucket.getEntryList()
                      .stream()
                      .filter(entry -> key.equals(entry.getKey()))
-                     .findFirst()
-                     .orElse(null);
+                     .findFirst();
     }
 
     private boolean removeEntry(Object key) {
-        Entry<K, V> matchingEntry = getEntry(key);
+        Optional<Map.Entry<K, V>> entry = getEntry(key);
+        if (!entry.isPresent()) {
+            return false;
+        }
         Bucket<K, V> bucket = findBucketForKey(key);
-        return bucket.getEntryList().remove(matchingEntry);
+        return bucket.getEntryList().remove(entry.get());
     }
 
     private Bucket<K, V> findBucketForKey(Object key) {
