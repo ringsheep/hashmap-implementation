@@ -154,4 +154,15 @@ public class HashMapTest {
         assertEquals(1, map.size());
         assertFalse(result);
     }
+
+    @Test
+    public void should_not_remove_values_by_non_existing_key_and_value() {
+        HashMap<String, Integer> map = new HashMap<>();
+
+        map.put("123", 123);
+        Boolean result = map.remove("345", 123);
+
+        assertEquals(1, map.size());
+        assertFalse(result);
+    }
 }

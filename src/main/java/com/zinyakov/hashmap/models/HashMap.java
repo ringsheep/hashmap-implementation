@@ -59,16 +59,16 @@ public class HashMap<K,V> implements Map<K, V> {
 
     @Override
     public V put(K key, V value) {
-        Optional<Entry<K, V>> matchingEntry = getEntry(key);
+        Optional<Entry<K, V>> matchedEntry = getEntry(key);
 
-        if (!matchingEntry.isPresent()) {
+        if (!matchedEntry.isPresent()) {
             Bucket<K, V> bucket = findBucketForKey(key);
             bucket.getEntryList().add(new EntryModel<>(key, value));
             return null;
         }
 
-        V oldValue = matchingEntry.get().getValue();
-        matchingEntry.get().setValue(value);
+        V oldValue = matchedEntry.get().getValue();
+        matchedEntry.get().setValue(value);
         return oldValue;
     }
 
@@ -82,7 +82,7 @@ public class HashMap<K,V> implements Map<K, V> {
             return false;
         }
 
-        return removeEntry(key);
+        return removeEntry(entry.get());
     }
 
     @Override
@@ -93,7 +93,7 @@ public class HashMap<K,V> implements Map<K, V> {
         }
 
         V oldValue = entry.get().getValue();
-        removeEntry(key);
+        removeEntry(entry.get());
         return oldValue;
     }
 
@@ -140,13 +140,9 @@ public class HashMap<K,V> implements Map<K, V> {
                      .findFirst();
     }
 
-    private boolean removeEntry(Object key) {
-        Optional<Map.Entry<K, V>> entry = getEntry(key);
-        if (!entry.isPresent()) {
-            return false;
-        }
-        Bucket<K, V> bucket = findBucketForKey(key);
-        return bucket.getEntryList().remove(entry.get());
+    private boolean removeEntry(Entry<K, V> entry) {
+        Bucket<K, V> bucket = findBucketForKey(entry.getKey());
+        return bucket.getEntryList().remove(entry);
     }
 
     private Bucket<K, V> findBucketForKey(Object key) {
